@@ -3,1200 +3,1068 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ID Card Crop Studio</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<title>Passport Photo Maker</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <style>
-  :root{
-    --bg:#EEF1F6; --surface:#FFFFFF; --ink:#17233D; --ink-soft:#334264;
-    --muted:#5B6472; --accent:#B5842A; --accent-soft:#EFE1C6;
-    --border:#C7D0DD; --danger:#B3432E; --ok:#2F6B3E; --radius:10px;
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #ececec;
+    color: #1f2937;
   }
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--ink-soft);font-family:'Inter',sans-serif;padding:20px 14px 60px;}
-  .wrap{max-width:640px;margin:0 auto;}
-  header{display:flex;align-items:center;gap:12px;margin-bottom:22px;}
-  header svg{flex:none;}
-  h1{font-family:'Source Serif 4',serif;font-size:1.9rem;font-weight:700;color:var(--ink);margin:0;line-height:1.15;letter-spacing:-0.01em;}
-  h1 .accent-word{background:linear-gradient(90deg, var(--accent) 0%, #d9a53c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
-  header p{margin:0;font-size:.85rem;color:var(--muted);}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;}
-  .card h2{font-family:'Source Serif 4',serif;font-size:1.05rem;color:var(--ink);margin:0 0 12px;}
-  input[type=file]{width:100%;font-size:.82rem;padding:8px;border:1px dashed var(--border);border-radius:8px;background:#FAFBFD;color:var(--muted);}
-  .field{margin-top:12px;}
-  .field label{display:block;font-size:.78rem;font-weight:600;color:var(--ink);margin-bottom:6px;}
-  .field input[type=password], .field input[type=number]{
-    width:100%;padding:10px 10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;
+  .header {
+    background: linear-gradient(90deg,#1d4ed8,#2563eb);
+    color: #fff;
+    padding: 26px 20px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
   }
-  .field .note{font-size:.68rem;color:var(--muted);margin-top:5px;}
-  button.primary{
-    width:100%;background:var(--ink);color:#fff;border:none;padding:13px 16px;border-radius:8px;
-    font-size:.92rem;font-weight:600;font-family:inherit;cursor:pointer;margin-top:14px;
+  .header::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% -20%, rgba(255,255,255,0.25), transparent 60%);
+    pointer-events: none;
   }
-  button.primary:active{background:var(--ink-soft);}
-  button.primary:disabled{background:#AEB6C4;cursor:not-allowed;}
-  .status{font-size:.8rem;color:var(--muted);margin-top:10px;min-height:1em;white-space:pre-line;}
-  .status.err{color:var(--danger);}
-  .status.ok{color:var(--ok);}
-  .hidden{display:none;}
+  .header h1 {
+    font-size: 23px; margin: 0; font-weight: 800; letter-spacing: 0.4px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .header p {
+    margin: 4px 0 0; font-size: 13px; opacity: 0.92; letter-spacing: 0.3px; font-weight: 500;
+  }
+  .header-underline {
+    width: 46px; height: 3px; margin: 8px auto 0; border-radius: 3px;
+    background: linear-gradient(90deg,#fbbf24,#fde68a,#fbbf24);
+  }
+  .header-left { display:flex; flex-direction:column; align-items:center; gap:8px; position:relative; z-index:1; }
+  .camera-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: rgba(255,255,255,0.18);
+    display:flex; align-items:center; justify-content:center; font-size: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  .container { max-width: 1080px; margin: 16px auto; padding: 0 14px 60px; }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .step-title { display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; margin-bottom:14px;}
+  .step-num {
+    width: 26px; height:26px; border-radius:50%; background:#2563eb; color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0;
+  }
+  .divider { border:none; border-top:2px solid #2563eb; margin: -6px 0 16px; opacity:0.15;}
+  .persons-count-grid {
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(60px,1fr)); gap:10px;
+  }
+  .count-btn {
+    padding: 14px 0; border-radius:10px; border:1.5px solid #d1d5db; background:#fff;
+    font-size:17px; font-weight:600; cursor:pointer; transition: all .15s;
+  }
+  .count-btn:hover { border-color:#2563eb; }
+  .count-btn.selected { border-color:#2563eb; background:#eaf1ff; color:#2563eb; }
 
-  .tabs{display:flex;gap:8px;margin-bottom:12px;}
-  .tab-btn, .mode-btn{
-    flex:1;padding:9px 8px;border-radius:8px;border:1px solid var(--border);background:#fff;
-    color:var(--ink-soft);font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;
+  .persons-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap:14px; }
+  .person-card {
+    border:1.5px solid #e5e7eb; border-radius:12px; padding:14px; position:relative; background:#fafafa;
   }
-  .tab-btn.active, .mode-btn.active{background:var(--ink);border-color:var(--ink);color:#fff;}
-  .mode-row{display:flex;gap:8px;margin-bottom:14px;}
+  .person-card.filled { border-color:#2563eb; background:#f4f8ff; }
+  .person-label {
+    display:inline-block; background:#2563eb; color:#fff; font-size:12px; font-weight:600;
+    padding: 4px 10px; border-radius:14px; margin-bottom:10px;
+  }
+  .remove-x {
+    position:absolute; top:10px; right:10px; width:22px; height:22px; border-radius:50%;
+    background:#ef4444; color:#fff; border:none; cursor:pointer; font-size:12px; line-height:1;
+  }
+  .drop-zone {
+    border:2px dashed #cbd5e1; border-radius:10px; min-height:220px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#94a3b8; cursor:pointer; font-size:13px; overflow:hidden; position:relative;
+  }
+  .drop-zone img, .drop-zone canvas { max-width:100%; max-height:220px; border-radius:6px; }
+  .drop-zone .icon { font-size: 26px; margin-bottom: 6px; }
+  .controls { margin-top:10px; }
+  .controls label { font-size:12px; color:#475569; display:flex; align-items:center; gap:6px; margin-top:8px;}
+  .controls input[type=range] { width:100%; }
+  .counter-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .counter-row button {
+    width:30px; height:30px; border-radius:6px; border:1.5px solid #2563eb; background:#fff; color:#2563eb;
+    font-weight:700; cursor:pointer;
+  }
+  .counter-row input {
+    width:44px; text-align:center; border:1.5px solid #d1d5db; border-radius:6px; height:30px;
+  }
+  .bg-tools { margin-top:10px; padding-top:10px; border-top:1px dashed #dbe4f0; }
+  .bg-tools .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .swatch {
+    width:22px; height:22px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1.5px #d1d5db; cursor:pointer;
+  }
+  .swatch.selected { box-shadow:0 0 0 2px #2563eb; }
+  .btn {
+    border:none; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .btn-blue { background:#2563eb; color:#fff; }
+  .btn-blue:disabled { background:#93b4f0; cursor:not-allowed; }
+  .btn-outline { background:#fff; color:#2563eb; border:1.5px solid #2563eb; }
+  .btn-green { background:linear-gradient(90deg,#16a34a,#15803d); color:#fff; width:100%; padding:14px; font-size:15px; }
+  .btn-orange { background:#f97316; color:#fff; }
+  .info-box {
+    background:#eaf1ff; color:#1d4ed8; padding:12px 14px; border-radius:10px; font-size:13px; margin: 6px 0 16px;
+  }
+  .change-btn { background:#f59e0b; color:#fff; border:none; padding:7px 12px; border-radius:8px; font-size:12px; cursor:pointer; }
+  .sheet-preview { border:1px solid #e5e7eb; border-radius:10px; overflow:auto; max-height:520px; background:#f8fafc; padding:10px; text-align:center;}
+  .sheet-preview img { max-width:100%; }
+  .download-row { display:flex; gap:10px; margin-top:14px; }
+  .download-row .btn { flex:1; }
+  .status { font-size:12px; margin-top:8px; color:#2563eb; }
+  input[type=file] { display:none; }
+  input[type=color] { width:38px; height:30px; border:none; padding:0; background:none; cursor:pointer; }
 
-  .editor{
-    position:relative;width:100%;border:1px solid var(--border);border-radius:8px;
-    overflow:hidden;background:#E4E9F1;touch-action:none;
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(15,23,42,0.6); display:none;
+    align-items:center; justify-content:center; z-index:1000; padding:14px;
   }
-  .editor img{display:block;width:100%;height:auto;user-select:none;pointer-events:none;}
-  .editor svg{position:absolute;inset:0;width:100%;height:100%;}
-  .editor svg polygon.poly-front{fill:rgba(181,132,42,0.18);stroke:#B5842A;stroke-width:2;vector-effect:non-scaling-stroke;}
-  .editor svg polygon.poly-back{fill:rgba(34,99,145,0.16);stroke:#226391;stroke-width:2;vector-effect:non-scaling-stroke;}
-  .handle{
-    position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;
-    border-radius:50%;border:2px solid #fff;
-    box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:grab;touch-action:none;
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:#fff; border-radius:14px; overflow:hidden; width:100%; max-width:480px; }
+  .modal-header {
+    background:linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; padding:14px 18px;
+    display:flex; align-items:center; justify-content:space-between; font-weight:700; font-size:15px;
   }
-  .handle.handle-front{background:#B5842A;}
-  .handle.handle-back{background:#226391;}
-  .handle:active{cursor:grabbing;}
-  .editor-hint{font-size:.7rem;color:var(--muted);margin-top:8px;}
-  .side-heading{font-size:.85rem;font-weight:700;color:var(--ink);margin-bottom:8px;}
-  .legend{display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--muted);margin-top:10px;}
-  .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
-  .legend .dot.front{background:#B5842A;}
-  .legend .dot.back{background:#226391;margin-left:10px;}
-
-  .row-2{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
-  .row-2 button{
-    flex:1;min-width:120px;padding:11px 8px;border-radius:8px;font-size:.82rem;font-weight:600;
-    font-family:inherit;cursor:pointer;border:1px solid var(--ink);background:#fff;color:var(--ink);
-  }
-  .row-2 button.gold{background:var(--accent);border-color:var(--accent);color:#fff;}
-
-  .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
-  .chip{
-    display:flex;align-items:center;gap:6px;background:var(--accent-soft);border:1px solid var(--accent);
-    border-radius:20px;padding:6px 8px 6px 14px;font-size:.78rem;font-weight:600;color:var(--ink);
-  }
-  .chip button{
-    background:transparent;color:var(--ink);cursor:pointer;font-family:inherit;
-    border:none;font-size:.85rem;padding:2px 4px;line-height:1;
-  }
-  .chip .apply{cursor:pointer;}
-  .tmpl-actions{display:flex;gap:8px;margin-top:6px;}
-  .tmpl-actions button, .tmpl-actions label{
-    flex:1;text-align:center;padding:9px 8px;border-radius:8px;font-size:.78rem;font-weight:600;
-    font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--ink-soft);
-  }
-  .tmpl-actions input[type=file]{display:none;}
-
-  .size-tag{
-    display:inline-block;font-size:.7rem;font-weight:600;color:var(--ink);
-    background:var(--accent-soft);border-radius:5px;padding:2px 8px;margin:0 0 10px;
-  }
-  .card-preview, .a4-preview{width:100%;border:1px solid var(--border);border-radius:6px;display:block;background:#fff;}
-  footer{text-align:center;font-size:.7rem;color:var(--muted);margin-top:26px;}
-
-  .settings-row{margin-bottom:16px;}
-  .settings-row:last-child{margin-bottom:0;}
-  .settings-row .settings-label{
-    display:flex;justify-content:space-between;align-items:center;
-    font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:8px;
-  }
-  .settings-row .settings-label .value{color:var(--accent);font-weight:700;}
-  select#opt-border{
-    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;
-    font-size:.9rem;font-family:inherit;background:#fff;color:var(--ink-soft);
-  }
-  input[type=range]{
-    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;
-    background:var(--accent-soft);outline:none;
-  }
-  input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
-    background:var(--accent);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;
-  }
-  input[type=range]::-moz-range-thumb{
-    width:22px;height:22px;border-radius:50%;background:var(--accent);
-    border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;
-  }
-
-  .menu-wrap{position:relative;}
-  .menu-btn{
-    width:38px;height:38px;border-radius:8px;border:1px solid var(--border);
-    background:#fff;color:var(--ink);font-size:1.15rem;line-height:1;cursor:pointer;flex:none;
-  }
-  .menu-dropdown{
-    position:absolute;top:46px;left:0;background:#fff;border:1px solid var(--border);
-    border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.15);min-width:230px;padding:8px;z-index:30;
-  }
-  .menu-dropdown.hidden{display:none;}
-  .menu-section-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 8px 2px;}
-  .menu-item{
-    display:flex;align-items:center;gap:8px;padding:10px 8px;border-radius:6px;
-    font-size:.85rem;font-weight:600;color:var(--ink-soft);text-decoration:none;
-  }
-  .menu-item:hover, .menu-item:active{background:var(--accent-soft);}
-  .menu-note{font-size:.66rem;color:var(--muted);padding:6px 8px 4px;line-height:1.4;}
-
-  .photo-editor{
-    position:relative;width:100%;max-width:320px;margin:0 auto;border:1px solid var(--border);
-    border-radius:8px;overflow:hidden;background:#E4E9F1;touch-action:none;
-  }
-  .photo-editor img{display:block;width:100%;height:auto;user-select:none;pointer-events:none;}
-  .photo-editor svg{position:absolute;inset:0;width:100%;height:100%;}
-  .photo-editor svg polygon{fill:rgba(46,120,80,0.18);stroke:#2F6B3E;stroke-width:2;vector-effect:non-scaling-stroke;}
-  .photo-handle{
-    position:absolute;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
-    background:#2F6B3E;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:grab;touch-action:none;
-  }
+  .modal-header button { background:rgba(255,255,255,0.2); border:none; color:#fff; width:26px; height:26px; border-radius:50%; cursor:pointer; }
+  .modal-body { padding:16px; background:#f1f5f9; }
+  .crop-img-wrap { max-height:60vh; overflow:hidden; background:#e2e8f0; }
+  .crop-img-wrap img { display:block; max-width:100%; }
+  .modal-footer { display:flex; gap:10px; padding:14px 16px; }
+  .modal-footer .btn { flex:1; padding:12px; font-size:14px; }
+  .btn-gray { background:#e5e7eb; color:#374151; }
+  .crop-toolbar { margin-top:12px; }
+  .crop-toolbar-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .crop-toolbar-row .btn { flex:1; min-width:100px; padding:9px 6px; font-size:12px; }
+  #freeCropBtn.active { background:#2563eb; color:#fff; }
+  .btn-outline.active { background:#2563eb; color:#fff; }
+  .crop-toolbar-label { font-size:12px; font-weight:600; color:#475569; display:flex; justify-content:space-between; margin-bottom:4px; }
+  .crop-toolbar input[type=range] { width:100%; }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <header>
-    <div class="menu-wrap">
-      <button class="menu-btn" id="menu-btn" type="button" aria-label="Menu">&#9776;</button>
-      <div class="menu-dropdown hidden" id="menu-dropdown">
-        <div class="menu-section-label">Tools</div>
-        <a class="menu-item" id="menu-passport-link" href="passport-photo-maker/index.html" target="_blank" rel="noopener">
-          &#128193; Passport Photo Maker
-        </a>
-        <div class="menu-note">Setup: is HTML file ke saath ek folder banao naam "passport-photo-maker", usme apni doosri tool ki HTML file "index.html" naam se daalo. Dono files ek hi parent folder mein hone chahiye.</div>
-      </div>
-    </div>
-    <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-      <rect x="1" y="6" width="32" height="22" rx="3" fill="#17233D"/>
-      <rect x="5" y="10" width="8" height="8" rx="1.5" fill="#EFE1C6"/>
-      <rect x="16" y="10" width="13" height="2" rx="1" fill="#B5842A"/>
-      <rect x="16" y="14" width="13" height="2" rx="1" fill="#3A4A6B"/>
-      <rect x="5" y="21" width="24" height="2" rx="1" fill="#3A4A6B"/>
-    </svg>
+<div class="header">
+  <div class="header-left">
+    <div class="camera-icon">📷</div>
     <div>
-      <h1>ID Card Crop <span class="accent-word">Studio</span></h1>
-    </div>
-  </header>
-
-  <div class="card">
-    <h2>1. Upload karein</h2>
-    <div class="tabs" style="margin-bottom:14px;">
-      <button class="tab-btn active" id="upload-mode-pdf" type="button">PDF (ek page)</button>
-      <button class="tab-btn" id="upload-mode-photos" type="button">Photos (Front/Back alag)</button>
-    </div>
-
-    <div id="pdf-panel">
-      <input type="file" id="file-input" accept="application/pdf,image/jpeg,image/png,image/jpg">
-      <div class="field">
-        <label for="pw-input">PDF ka password (agar PDF upload kiya hai)</label>
-        <input type="password" id="pw-input" placeholder="Aadhaar/ID PDF password">
-        <div class="note">Isme ek hi file dalein jisme Front + Back dono ek hi page/photo par ho.</div>
-      </div>
-    </div>
-
-    <div id="photos-panel" class="hidden">
-      <div class="field" style="margin-top:0;">
-        <label for="front-img-input">Front Photo (JPG/PNG)</label>
-        <input type="file" id="front-img-input" accept="image/jpeg,image/png,image/jpg">
-      </div>
-      <div class="field">
-        <label for="back-img-input">Back Photo (JPG/PNG)</label>
-        <input type="file" id="back-img-input" accept="image/jpeg,image/png,image/jpg">
-        <div class="note">Sirf ek side ki photo bhi upload kar sakte hain — jo bhi upload karenge sirf uska hi crop aayega.</div>
-      </div>
-    </div>
-
-    <button class="primary" id="load-btn" disabled>File Load Karein</button>
-    <div class="status" id="status"></div>
-  </div>
-
-  <div class="card hidden" id="templates-card">
-    <h2>Saved Templates</h2>
-    <div class="chip-row" id="chip-row"></div>
-    <div class="tmpl-actions">
-      <button id="export-tmpl-btn" type="button">Export</button>
-      <label for="import-tmpl-input">Import
-        <input type="file" id="import-tmpl-input" accept="application/json">
-      </label>
+      <h1>Passport Photo Maker</h1>
+      <p>पासपोर्ट साइज फोटो मेकर</p>
+      <div class="header-underline"></div>
     </div>
   </div>
+</div>
 
-  <div class="card hidden" id="editor-card">
-    <h2>2. Crop set karein</h2>
+<div class="container">
 
-    <div id="combined-editor-block">
-      <div class="tabs">
-        <button class="tab-btn active" id="tab-front" type="button">Front</button>
-        <button class="tab-btn" id="tab-back" type="button">Back</button>
+  <!-- STEP 1 -->
+  <div class="card" id="step1Card">
+    <div class="step-title"><div class="step-num">1</div> Select Number of Persons | व्यक्तियों की संख्या चुनें</div>
+    <hr class="divider">
+    <p style="margin-top:-6px;color:#64748b;font-size:14px;">👥 How many persons' photos do you want to create?</p>
+    <div class="persons-count-grid" id="countGrid"></div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card" id="step2Card" style="display:none;">
+    <div class="step-title" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="step-num">2</div> <span id="step2Title">Add Photos</span>
       </div>
-      <div class="mode-row">
-        <button class="mode-btn active" id="mode-free" type="button">Free Crop</button>
-        <button class="mode-btn" id="mode-perspective" type="button">Perspective Crop</button>
-      </div>
-      <div class="editor" id="editor">
-        <img id="page-img" alt="">
-        <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-          <polygon id="poly-front" class="poly-front" points=""></polygon>
-          <polygon id="poly-back" class="poly-back" points=""></polygon>
-        </svg>
-        <div class="handle handle-front" id="f-h0"></div>
-        <div class="handle handle-front" id="f-h1"></div>
-        <div class="handle handle-front" id="f-h2"></div>
-        <div class="handle handle-front" id="f-h3"></div>
-        <div class="handle handle-back" id="b-h0"></div>
-        <div class="handle handle-back" id="b-h1"></div>
-        <div class="handle handle-back" id="b-h2"></div>
-        <div class="handle handle-back" id="b-h3"></div>
-      </div>
-      <div class="legend"><span class="dot front"></span> Front &nbsp; <span class="dot back"></span> Back</div>
-      <div class="editor-hint">Dono cards ek hi page par ek saath dikhte hain — kisi bhi corner ko seedha drag karein, tab switch karne ki zarurat nahi. Free Crop = seedha rectangle, Perspective Crop = tedhe/skewed card ko bhi seedha kar deta hai.</div>
+      <button class="change-btn" onclick="goBackToStep1()">✎ Change</button>
     </div>
+    <hr class="divider">
+    <div class="persons-grid" id="personsGrid"></div>
+    <div class="info-box" id="totalInfo"></div>
+  </div>
 
-    <div id="solo-editor-block" class="hidden">
-      <div id="solo-front-wrap" class="hidden" style="margin-bottom:18px;">
-        <div class="side-heading">Front</div>
-        <div class="mode-row">
-          <button class="mode-btn active" id="mode-free-front" type="button">Free Crop</button>
-          <button class="mode-btn" id="mode-perspective-front" type="button">Perspective Crop</button>
+  <!-- STEP 3 -->
+  <div class="card" id="step3Card" style="display:none;">
+    <div class="step-title"><div class="step-num">3</div> Generate Sheet | शीट बनाएं</div>
+    <hr class="divider">
+    <p style="font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">🔲 Border Color</p>
+    <input type="color" id="borderColor" value="#000000">
+    <button class="btn btn-green" style="margin-top:16px;" onclick="generateSheet()">✎ Generate A4 Sheet</button>
+
+    <div id="sheetResult" style="display:none;margin-top:18px;">
+      <div class="info-box" style="background:#dcfce7;color:#15803d;">✅ Photo Sheet Ready! | फोटो शीट तैयार!</div>
+      <div class="sheet-preview"><img id="sheetImg"></div>
+      <div class="download-row">
+        <button class="btn btn-blue" onclick="downloadJPG()">🖼 Download JPG</button>
+        <button class="btn btn-orange" onclick="downloadPDF()">📄 Download PDF</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="cropModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>✂️ Crop Photo - <span id="cropPersonLabel">Person</span></span>
+      <button onclick="cancelCrop()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="crop-img-wrap"><img id="cropImg"></div>
+      <div class="crop-toolbar">
+        <div class="crop-toolbar-row">
+          <button class="btn btn-outline" onclick="rotateLeft()">⟲ Rotate Left</button>
+          <button class="btn btn-outline" onclick="rotateRight()">⟳ Rotate Right</button>
+          <button class="btn btn-outline" id="freeCropBtn" onclick="toggleFreeCrop()">🔓 Free Crop</button>
         </div>
-        <div class="editor" id="solo-front-editor">
-          <img id="solo-front-img" alt="">
-          <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-            <polygon id="solo-front-poly" class="poly-front" points=""></polygon>
-          </svg>
-          <div class="handle handle-front" id="sf-h0"></div>
-          <div class="handle handle-front" id="sf-h1"></div>
-          <div class="handle handle-front" id="sf-h2"></div>
-          <div class="handle handle-front" id="sf-h3"></div>
+        <label class="crop-toolbar-label">📐 Straighten <span id="straightenVal">0°</span></label>
+        <input type="range" id="straightenSlider" min="-45" max="45" value="0" step="1" oninput="onStraighten(this.value)">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="cancelCrop()">✕ Cancel</button>
+      <button class="btn btn-blue" onclick="applyCrop()">✓ Apply Crop</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="fixEdgeModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>🎨 Fix Edge Colour - <span id="fixEdgeLabel">Person</span></span>
+      <button onclick="closeFixEdge()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:#64748b;margin:0 0 10px;">Jahan bhi white/purana background dikh raha ho, wahan ungli se draw karein — wahi background color bhar jayega.</p>
+      <div class="crop-img-wrap"><canvas id="fixEdgeCanvas" style="max-width:100%;touch-action:none;cursor:crosshair;"></canvas></div>
+      <div class="crop-toolbar">
+        <div class="crop-toolbar-row">
+          <button class="btn btn-outline" onclick="undoFixEdge()">⎌ Undo</button>
+        </div>
+        <label class="crop-toolbar-label">🖊️ Brush Size <span id="fixBrushVal">16</span></label>
+        <input type="range" id="fixBrushSlider" min="4" max="50" value="16" step="1">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeFixEdge()">✕ Cancel</button>
+      <button class="btn btn-blue" onclick="saveFixEdge()">✓ Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="colorRemoveModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>🎯 Color Remove - <span id="colorRemoveLabel">Person</span></span>
+      <button onclick="closeColorRemove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:#64748b;margin:0 0 10px;">Plain/solid background wali photo ke liye best. "Auto Remove" se poora background ek click me hat jayega, ya seedha background par tap karke wahi jagah hataiye.</p>
+      <div class="crop-img-wrap"><canvas id="colorRemoveCanvas" style="max-width:100%;touch-action:none;cursor:crosshair;"></canvas></div>
+      <div class="crop-toolbar">
+        <label class="crop-toolbar-label">🎚️ Tolerance <span id="toleranceVal">30</span></label>
+        <input type="range" id="toleranceSlider" min="5" max="100" value="30" step="1" oninput="document.getElementById('toleranceVal').textContent=this.value">
+        <div class="crop-toolbar-row" style="margin-top:10px;">
+          <button class="btn btn-blue" onclick="autoRemoveColor()">✨ Auto Remove</button>
+          <button class="btn btn-outline" onclick="undoColorRemove()">⎌ Undo</button>
+          <button class="btn btn-outline" onclick="resetColorRemove()">↺ Reset</button>
         </div>
       </div>
-      <div id="solo-back-wrap" class="hidden">
-        <div class="side-heading">Back</div>
-        <div class="mode-row">
-          <button class="mode-btn active" id="mode-free-back" type="button">Free Crop</button>
-          <button class="mode-btn" id="mode-perspective-back" type="button">Perspective Crop</button>
-        </div>
-        <div class="editor" id="solo-back-editor">
-          <img id="solo-back-img" alt="">
-          <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-            <polygon id="solo-back-poly" class="poly-back" points=""></polygon>
-          </svg>
-          <div class="handle handle-back" id="sb-h0"></div>
-          <div class="handle handle-back" id="sb-h1"></div>
-          <div class="handle handle-back" id="sb-h2"></div>
-          <div class="handle handle-back" id="sb-h3"></div>
-        </div>
-      </div>
-      <div class="editor-hint">Jo photo upload ki hai sirf uska hi crop box dikh raha hai. Corners drag karke card ke edges par set karein.</div>
     </div>
-
-    <div class="field">
-      <label for="copies">A4 PDF ke liye copies</label>
-      <input type="number" id="copies" min="1" value="2">
-      <div class="note" id="copies-note">Max copies auto-calculate hoti hain · 2+ copies par Card Space Y ka farak dikhega</div>
-    </div>
-
-    <div class="row-2">
-      <button id="save-tmpl-btn" type="button">Template Save Karein</button>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeColorRemove()">✕ Cancel</button>
+      <button class="btn btn-blue" onclick="saveColorRemove()">✓ Save</button>
     </div>
   </div>
-
-  <div class="card hidden" id="photo-card">
-    <h2>3. Photo Brightness / Contrast</h2>
-    <div class="photo-editor" id="photo-editor">
-      <img id="photo-preview-img" alt="">
-      <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-        <polygon id="photo-poly" points=""></polygon>
-      </svg>
-      <div class="photo-handle" id="p-h0"></div>
-      <div class="photo-handle" id="p-h1"></div>
-      <div class="photo-handle" id="p-h2"></div>
-      <div class="photo-handle" id="p-h3"></div>
-    </div>
-    <div class="editor-hint" style="text-align:center;">Green box ko drag karke sirf photo ke upar set karein (front card par). Sirf isi hisse par brightness/contrast lagega.</div>
-    <div class="row-2">
-      <button id="refresh-photo-btn" type="button">Photo Area Refresh Karein</button>
-    </div>
-    <div class="settings-row" style="margin-top:14px;">
-      <div class="settings-label"><span>Brightness</span><span class="value" id="val-brightness">0</span></div>
-      <input type="range" id="opt-brightness" min="-100" max="100" step="1" value="0">
-    </div>
-    <div class="settings-row">
-      <div class="settings-label"><span>Contrast</span><span class="value" id="val-contrast">0</span></div>
-      <input type="range" id="opt-contrast" min="-100" max="100" step="1" value="0">
-    </div>
-  </div>
-
-  <div class="card hidden" id="settings-card">
-    <h2>4. Print Settings</h2>
-    <div class="settings-row">
-      <div class="settings-label"><span>Border</span></div>
-      <select id="opt-border">
-        <option value="yes" selected>Yes</option>
-        <option value="no">No</option>
-      </select>
-    </div>
-    <div class="settings-row">
-      <div class="settings-label"><span>Height (mm)</span><span class="value" id="val-height">54</span></div>
-      <input type="range" id="opt-height" min="30" max="90" step="0.1" value="54">
-    </div>
-    <div class="settings-row">
-      <div class="settings-label"><span>Width (mm)</span><span class="value" id="val-width">85.6</span></div>
-      <input type="range" id="opt-width" min="40" max="110" step="0.1" value="85.6">
-    </div>
-    <div class="settings-row">
-      <div class="settings-label"><span>Top Margin (mm)</span><span class="value" id="val-topmargin">10</span></div>
-      <input type="range" id="opt-topmargin" min="0" max="30" step="1" value="10">
-    </div>
-    <div class="settings-row">
-      <div class="settings-label"><span>Card Space X (mm)</span><span class="value" id="val-spacex">4</span></div>
-      <input type="range" id="opt-spacex" min="0" max="20" step="1" value="4">
-    </div>
-    <div class="settings-row">
-      <div class="settings-label"><span>Card Space Y (mm)</span><span class="value" id="val-spacey">6</span></div>
-      <input type="range" id="opt-spacey" min="0" max="20" step="1" value="6">
-    </div>
-    <button class="primary" id="generate-btn" type="button">Generate Preview</button>
-  </div>
-
-  <div class="card hidden" id="preview-wrap">
-    <h2>5. Preview aur download</h2>
-    <div class="size-tag" id="card-size-tag">Card size · exact 85.60mm × 53.98mm</div>
-    <canvas class="card-preview" id="card-canvas"></canvas>
-    <div class="row-2">
-      <button class="gold" id="dl-jpeg-card" type="button">JPEG download (card size)</button>
-    </div>
-    <div class="size-tag" style="margin-top:16px;">A4 sheet · print-ready</div>
-    <canvas class="a4-preview" id="a4-canvas"></canvas>
-    <div class="row-2">
-      <button class="gold" id="dl-pdf" type="button">PDF download (A4)</button>
-      <button id="dl-jpeg-sheet" type="button">JPEG download (A4 sheet)</button>
-    </div>
-  </div>
-
-  <footer>Ye tool sirf browser mein chalta hai — koi bhi file ya password server par nahi jaata. Templates is browser mein save hote hain.</footer>
 </div>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let numPersons = 0;
+let persons = []; // {rawImg, brightness, contrast, copies, bgColor, hasBg, processedCanvas}
+let sheetCanvas = null;
 
-const DPI = 300;
-const MM_TO_PX = mm => Math.round(mm/25.4*DPI);
+// ---- Step 1: choose count ----
+const countGrid = document.getElementById('countGrid');
+for (let i = 1; i <= 10; i++) {
+  const b = document.createElement('button');
+  b.className = 'count-btn';
+  b.textContent = i;
+  b.onclick = () => selectCount(i, b);
+  countGrid.appendChild(b);
+}
 
-function getSettings(){
-  return {
-    border: document.getElementById('opt-border').value === 'yes',
-    heightMM: Number(document.getElementById('opt-height').value),
-    widthMM: Number(document.getElementById('opt-width').value),
-    topMarginMM: Number(document.getElementById('opt-topmargin').value),
-    spaceXMM: Number(document.getElementById('opt-spacex').value),
-    spaceYMM: Number(document.getElementById('opt-spacey').value)
+function selectCount(n, btn) {
+  numPersons = n;
+  document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  persons = Array.from({length: n}, () => ({
+    rawImg: null, brightness: 100, contrast: 100, copies: 6, bgColor: '#ffffff', hasBg: false, processedCanvas: null, maskCanvas: null, cutoutCanvas: null
+  }));
+  document.getElementById('step2Title').textContent = `Add Photos for ${n} Person${n>1?'s':''} | फोटो जोड़ें`;
+  renderPersonsGrid();
+  document.getElementById('step2Card').style.display = 'block';
+  document.getElementById('step3Card').style.display = 'block';
+  document.getElementById('step2Card').scrollIntoView({behavior:'smooth'});
+}
+
+function goBackToStep1() {
+  document.getElementById('step2Card').style.display = 'none';
+  document.getElementById('step3Card').style.display = 'none';
+  document.getElementById('step1Card').scrollIntoView({behavior:'smooth'});
+}
+
+// ---- Step 2: person cards ----
+function renderPersonsGrid() {
+  const grid = document.getElementById('personsGrid');
+  grid.innerHTML = '';
+  persons.forEach((p, idx) => {
+    const card = document.createElement('div');
+    card.className = 'person-card' + (p.rawImg ? ' filled' : '');
+    card.innerHTML = `
+      <span class="person-label">Person ${idx+1}</span>
+      ${p.rawImg ? `<button class="remove-x" onclick="removePhoto(${idx})">✕</button>` : ''}
+      ${p.rawImg ? `<button class="change-btn" style="position:absolute;top:10px;right:42px;padding:4px 8px;font-size:11px;" onclick="recropExisting(${idx})">✂️ Re-crop</button>` : ''}
+      <div class="drop-zone" id="dz-${idx}" onclick="triggerUpload(${idx})">
+        ${p.rawImg ? `<canvas id="canvas-${idx}"></canvas>` : `<div class="icon">👤➕</div><div>Add Photo</div>`}
+      </div>
+      <input type="file" accept="image/*" id="file-${idx}" onchange="handleFile(${idx}, this.files[0])">
+      ${p.rawImg ? `
+      <div class="controls">
+        <label>☀️ Brightness</label>
+        <input type="range" min="50" max="150" value="${p.brightness}" oninput="updateFilter(${idx}, 'brightness', this.value)">
+        <label>◐ Contrast</label>
+        <input type="range" min="50" max="150" value="${p.contrast}" oninput="updateFilter(${idx}, 'contrast', this.value)">
+        <label>🖼 No. of Photos (Max: 42)</label>
+        <div class="counter-row">
+          <button onclick="changeCopies(${idx}, -1)">−</button>
+          <input type="text" id="copies-${idx}" value="${p.copies}" readonly>
+          <button onclick="changeCopies(${idx}, 1)">+</button>
+        </div>
+        <div class="bg-tools">
+          <label>🪄 Background Removal</label>
+          <div class="row">
+            <button class="btn btn-outline" id="rembg-${idx}" onclick="removeBackground(${idx})">🤖 AI Remove</button>
+            <button class="btn btn-outline" onclick="openColorRemove(${idx})">🎯 Color Remove</button>
+            ${p.processedCanvas ? `<button class="btn btn-outline" onclick="openFixEdge(${idx})">🎨 Fix Edge Colour</button>` : ''}
+          </div>
+          <div class="row" style="margin-top:8px;" id="bgColorRow-${idx}" style="display:${p.hasBg ? 'flex':'none'}">
+            ${['#ffffff','#2563eb','#dc2626','#16a34a','#94a3b8'].map(c => `
+              <div class="swatch ${p.bgColor===c?'selected':''}" style="background:${c}" onclick="setBgColor(${idx}, '${c}')"></div>
+            `).join('')}
+            <input type="color" value="${p.bgColor}" onchange="setBgColor(${idx}, this.value)">
+          </div>
+          <div class="status" id="status-${idx}"></div>
+        </div>
+      </div>` : ''}
+    `;
+    grid.appendChild(card);
+    if (p.rawImg) drawPersonCanvas(idx);
+  });
+  updateTotalInfo();
+}
+
+function recropExisting(idx) {
+  const img = persons[idx].rawImg;
+  if (img) openCropModal(idx, img.src);
+}
+
+function triggerUpload(idx) {
+  document.getElementById(`file-${idx}`).click();
+}
+
+function handleFile(idx, file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    openCropModal(idx, e.target.result);
   };
+  reader.readAsDataURL(file);
 }
 
-function bindSettingsUI(){
-  const pairs = [
-    ['opt-height','val-height'],
-    ['opt-width','val-width'],
-    ['opt-topmargin','val-topmargin'],
-    ['opt-spacex','val-spacex'],
-    ['opt-spacey','val-spacey']
-  ];
-  pairs.forEach(([inputId,valId])=>{
-    const input = document.getElementById(inputId);
-    const val = document.getElementById(valId);
-    input.addEventListener('input', ()=>{
-      val.textContent = input.value;
-      if(hasAnySource()) generateOutputs();
+// ---- Crop modal (Cropper.js) ----
+let cropIndex = null;
+let cropperInstance = null;
+let baseRotation = 0;
+let straightenVal = 0;
+let freeCropOn = false;
+
+function openCropModal(idx, dataUrl) {
+  cropIndex = idx;
+  baseRotation = 0;
+  straightenVal = 0;
+  freeCropOn = false;
+  document.getElementById('straightenSlider').value = 0;
+  document.getElementById('straightenVal').textContent = '0°';
+  document.getElementById('freeCropBtn').classList.remove('active');
+  document.getElementById('freeCropBtn').textContent = '🔓 Free Crop';
+  document.getElementById('cropPersonLabel').textContent = `Person ${idx + 1}`;
+  const cropImg = document.getElementById('cropImg');
+  cropImg.src = dataUrl;
+  document.getElementById('cropModal').classList.add('open');
+
+  const initCropper = () => {
+    if (cropperInstance) cropperInstance.destroy();
+    cropperInstance = new Cropper(cropImg, {
+      aspectRatio: 35 / 45, // standard passport photo ratio
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 0.9,
+      background: false,
+      responsive: true,
+      guides: true
     });
-  });
-  document.getElementById('opt-border').addEventListener('change', ()=>{
-    if(hasAnySource()) generateOutputs();
-  });
-}
-
-let selectedFile = null;
-function hasAnySource(){ return !!(sides.front.sourceCanvas || sides.back.sourceCanvas); }
-
-// ---------------- Top-left menu ----------------
-document.getElementById('menu-btn').addEventListener('click', e=>{
-  e.stopPropagation();
-  document.getElementById('menu-dropdown').classList.toggle('hidden');
-});
-document.addEventListener('click', e=>{
-  const dd = document.getElementById('menu-dropdown');
-  if(!dd.classList.contains('hidden') && !dd.contains(e.target) && e.target.id!=='menu-btn'){
-    dd.classList.add('hidden');
-  }
-});
-
-// ---------------- Photo brightness/contrast area (relative to FRONT card) ----------------
-let photoRect = { x0:0.05, y0:0.15, x1:0.30, y1:0.85 }; // fraction of the front card
-const photoHandles = [0,1,2,3].map(i=>document.getElementById('p-h'+i));
-const photoPoly = document.getElementById('photo-poly');
-const photoPreviewImg = document.getElementById('photo-preview-img');
-const photoEditorEl = document.getElementById('photo-editor');
-
-function photoRectPts(){
-  const {x0,y0,x1,y1} = photoRect;
-  return [{x:x0,y:y0},{x:x1,y:y0},{x:x1,y:y1},{x:x0,y:y1}];
-}
-function updatePhotoOverlay(){
-  const pts = photoRectPts();
-  photoPoly.setAttribute('points', pts.map(p=>`${p.x},${p.y}`).join(' '));
-  photoHandles.forEach((h,i)=>{
-    h.style.left = (pts[i].x*100)+'%';
-    h.style.top = (pts[i].y*100)+'%';
-  });
-}
-function refreshPhotoPreview(){
-  if(!sides.front.sourceCanvas) return;
-  const s = getSettings();
-  const ratio = s.heightMM / s.widthMM;
-  const previewW = 480, previewH = Math.round(previewW*ratio);
-  const frontPreview = cropToCanvas('front', previewW, previewH);
-  photoPreviewImg.src = frontPreview.toDataURL('image/jpeg', 0.9);
-  updatePhotoOverlay();
-}
-document.getElementById('refresh-photo-btn').addEventListener('click', refreshPhotoPreview);
-
-let photoDragIndex = -1;
-photoHandles.forEach((h,i)=>{
-  h.addEventListener('pointerdown', e=>{
-    photoDragIndex = i;
-    h.setPointerCapture(e.pointerId);
-  });
-  h.addEventListener('pointermove', e=>{
-    if(photoDragIndex !== i) return;
-    const rect = photoEditorEl.getBoundingClientRect();
-    let fx = (e.clientX-rect.left)/rect.width;
-    let fy = (e.clientY-rect.top)/rect.height;
-    fx = Math.max(0, Math.min(1, fx));
-    fy = Math.max(0, Math.min(1, fy));
-    // corners: 0=TL,1=TR,2=BR,3=BL -> keep axis-aligned rectangle
-    if(i===0){ photoRect.x0=fx; photoRect.y0=fy; }
-    else if(i===1){ photoRect.x1=fx; photoRect.y0=fy; }
-    else if(i===2){ photoRect.x1=fx; photoRect.y1=fy; }
-    else { photoRect.x0=fx; photoRect.y1=fy; }
-    updatePhotoOverlay();
-  });
-  h.addEventListener('pointerup', ()=>{ if(photoDragIndex===i) photoDragIndex=-1; });
-  h.addEventListener('pointercancel', ()=>{ if(photoDragIndex===i) photoDragIndex=-1; });
-});
-
-['opt-brightness','opt-contrast'].forEach(id=>{
-  const input = document.getElementById(id);
-  const val = document.getElementById('val-'+id.replace('opt-',''));
-  input.addEventListener('input', ()=>{
-    val.textContent = input.value;
-    if(hasAnySource()) generateOutputs();
-  });
-});
-
-function applyBrightnessContrast(cardCanvas, brightness, contrastVal){
-  if(brightness===0 && contrastVal===0) return;
-  const ctx = cardCanvas.getContext('2d');
-  const w = cardCanvas.width, h = cardCanvas.height;
-  const x = Math.round(Math.min(photoRect.x0,photoRect.x1)*w);
-  const y = Math.round(Math.min(photoRect.y0,photoRect.y1)*h);
-  const rw = Math.max(1, Math.round(Math.abs(photoRect.x1-photoRect.x0)*w));
-  const rh = Math.max(1, Math.round(Math.abs(photoRect.y1-photoRect.y0)*h));
-  const cx = Math.max(0, Math.min(w-1, x)), cy = Math.max(0, Math.min(h-1, y));
-  const cw = Math.min(rw, w-cx), ch = Math.min(rh, h-cy);
-  if(cw<=0 || ch<=0) return;
-  const imgData = ctx.getImageData(cx,cy,cw,ch);
-  const d = imgData.data;
-  const C = contrastVal*2.55;
-  const factor = (259*(C+255))/(255*(259-C));
-  for(let i=0;i<d.length;i+=4){
-    for(let c=0;c<3;c++){
-      let v = factor*(d[i+c]-128)+128+brightness;
-      d[i+c] = v<0?0:(v>255?255:v);
-    }
-  }
-  ctx.putImageData(imgData, cx, cy);
-}
-
-function defaultCrop(rect){
-  return {
-    mode: 'free',
-    sourceCanvas: null,
-    pts: [{x:rect.x0,y:rect.y0},{x:rect.x1,y:rect.y0},{x:rect.x1,y:rect.y1},{x:rect.x0,y:rect.y1}]
   };
+  cropImg.onload = initCropper;
 }
-const FRONT_HALF = {x0:0.03,y0:0.03,x1:0.47,y1:0.97};
-const BACK_HALF  = {x0:0.53,y0:0.03,x1:0.97,y1:0.97};
-const FULL_RECT  = {x0:0.02,y0:0.02,x1:0.98,y1:0.98};
-const sides = {
-  front: defaultCrop(FRONT_HALF),
-  back: defaultCrop(BACK_HALF)
-};
-let activeSide = 'front';
-let uploadMode = 'pdf'; // 'pdf' | 'photos'
 
-const fileInput = document.getElementById('file-input');
-const pwInput = document.getElementById('pw-input');
-const frontImgInput = document.getElementById('front-img-input');
-const backImgInput = document.getElementById('back-img-input');
-const loadBtn = document.getElementById('load-btn');
-const statusEl = document.getElementById('status');
-const editorCard = document.getElementById('editor-card');
-const previewWrap = document.getElementById('preview-wrap');
-const editorEl = document.getElementById('editor');
-const pageImg = document.getElementById('page-img');
-const polyEls = { front: document.getElementById('poly-front'), back: document.getElementById('poly-back') };
-const handleEls = {
-  front: [0,1,2,3].map(i=>document.getElementById('f-h'+i)),
-  back: [0,1,2,3].map(i=>document.getElementById('b-h'+i))
-};
-
-// ---------------- Upload mode toggle ----------------
-document.getElementById('upload-mode-pdf').addEventListener('click', ()=> setUploadMode('pdf'));
-document.getElementById('upload-mode-photos').addEventListener('click', ()=> setUploadMode('photos'));
-function setUploadMode(mode){
-  uploadMode = mode;
-  document.getElementById('upload-mode-pdf').classList.toggle('active', mode==='pdf');
-  document.getElementById('upload-mode-photos').classList.toggle('active', mode==='photos');
-  document.getElementById('pdf-panel').classList.toggle('hidden', mode!=='pdf');
-  document.getElementById('photos-panel').classList.toggle('hidden', mode!=='photos');
-  setStatus('');
-  updateLoadBtnState();
+function applyRotation() {
+  if (cropperInstance) cropperInstance.rotateTo(baseRotation + straightenVal);
 }
-function updateLoadBtnState(){
-  if(uploadMode==='pdf'){
-    loadBtn.disabled = !selectedFile;
+
+function rotateLeft() {
+  baseRotation -= 90;
+  applyRotation();
+}
+
+function rotateRight() {
+  baseRotation += 90;
+  applyRotation();
+}
+
+function onStraighten(val) {
+  straightenVal = parseFloat(val);
+  document.getElementById('straightenVal').textContent = `${val}°`;
+  applyRotation();
+}
+
+function toggleFreeCrop() {
+  freeCropOn = !freeCropOn;
+  const btn = document.getElementById('freeCropBtn');
+  if (freeCropOn) {
+    cropperInstance.setAspectRatio(NaN);
+    btn.classList.add('active');
+    btn.textContent = '🔒 Free Crop ON';
   } else {
-    loadBtn.disabled = !((frontImgInput.files && frontImgInput.files[0]) || (backImgInput.files && backImgInput.files[0]));
+    cropperInstance.setAspectRatio(35 / 45);
+    btn.classList.remove('active');
+    btn.textContent = '🔓 Free Crop';
   }
 }
 
-fileInput.addEventListener('change', e=>{
-  selectedFile = e.target.files[0] || null;
-  updateLoadBtnState();
-  setStatus('');
-});
-frontImgInput.addEventListener('change', ()=>{ updateLoadBtnState(); setStatus(''); });
-backImgInput.addEventListener('change', ()=>{ updateLoadBtnState(); setStatus(''); });
-
-function setStatus(msg, kind){
-  statusEl.textContent = msg || '';
-  statusEl.className = 'status' + (kind ? ' '+kind : '');
+function cancelCrop() {
+  document.getElementById('cropModal').classList.remove('open');
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+  const idx = cropIndex;
+  cropIndex = null;
+  // if this person had no photo before, reset the file input so "Add Photo" works again
+  const fileInput = document.getElementById(`file-${idx}`);
+  if (fileInput) fileInput.value = '';
 }
 
-async function fileToCanvas(file){
-  const url = URL.createObjectURL(file);
-  const img = await new Promise((resolve,reject)=>{
-    const im = new Image();
-    im.onload = ()=>resolve(im);
-    im.onerror = reject;
-    im.src = url;
-  });
-  const c = document.createElement('canvas');
-  c.width = img.naturalWidth; c.height = img.naturalHeight;
-  c.getContext('2d').drawImage(img,0,0);
-  URL.revokeObjectURL(url);
-  return c;
-}
-
-function waitImgLoad(imgEl){
-  return new Promise(res=>{ imgEl.onload = res; });
-}
-
-loadBtn.addEventListener('click', async ()=>{
-  loadBtn.disabled = true;
-  setStatus('File load ho rahi hai...');
-  try{
-    if(uploadMode === 'pdf'){
-      if(!selectedFile) return;
-      const isPdf = selectedFile.type === 'application/pdf' || /\.pdf$/i.test(selectedFile.name||'');
-      let sourceCanvas;
-      if(isPdf){
-        const buf = await selectedFile.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: buf, password: pwInput.value || undefined });
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 3.5 });
-        sourceCanvas = document.createElement('canvas');
-        sourceCanvas.width = viewport.width;
-        sourceCanvas.height = viewport.height;
-        await page.render({ canvasContext: sourceCanvas.getContext('2d'), viewport }).promise;
-      } else {
-        sourceCanvas = await fileToCanvas(selectedFile);
-      }
-
-      sides.front = defaultCrop(FRONT_HALF);
-      sides.back = defaultCrop(BACK_HALF);
-      sides.front.sourceCanvas = sourceCanvas;
-      sides.back.sourceCanvas = sourceCanvas;
-
-      document.getElementById('combined-editor-block').classList.remove('hidden');
-      document.getElementById('solo-editor-block').classList.add('hidden');
-
-      pageImg.src = sourceCanvas.toDataURL('image/jpeg', 0.9);
-      await waitImgLoad(pageImg);
-      updateOverlay();
-      switchSide('front');
-      setStatus('File load ho gayi. Front (peela) aur Back (neela) dono corners ek saath set karein.', 'ok');
-    } else {
-      const frontFile = frontImgInput.files[0] || null;
-      const backFile = backImgInput.files[0] || null;
-      if(!frontFile && !backFile){
-        setStatus('Kam se kam ek photo (Front ya Back) upload karein.', 'err');
-        return;
-      }
-
-      sides.front = defaultCrop(FULL_RECT);
-      sides.back = defaultCrop(FULL_RECT);
-
-      document.getElementById('combined-editor-block').classList.add('hidden');
-      document.getElementById('solo-editor-block').classList.remove('hidden');
-      document.getElementById('solo-front-wrap').classList.toggle('hidden', !frontFile);
-      document.getElementById('solo-back-wrap').classList.toggle('hidden', !backFile);
-
-      if(frontFile){
-        sides.front.sourceCanvas = await fileToCanvas(frontFile);
-        document.getElementById('solo-front-img').src = sides.front.sourceCanvas.toDataURL('image/jpeg', 0.9);
-        await waitImgLoad(document.getElementById('solo-front-img'));
-        updateSoloOverlay('front');
-        setSoloModeButtons('front');
-      }
-      if(backFile){
-        sides.back.sourceCanvas = await fileToCanvas(backFile);
-        document.getElementById('solo-back-img').src = sides.back.sourceCanvas.toDataURL('image/jpeg', 0.9);
-        await waitImgLoad(document.getElementById('solo-back-img'));
-        updateSoloOverlay('back');
-        setSoloModeButtons('back');
-      }
-      setStatus('Photo(s) load ho gayi. Jo bhi upload ki hai uska crop box set karein.', 'ok');
-    }
-
-    editorCard.classList.remove('hidden');
-    document.getElementById('settings-card').classList.remove('hidden');
-    document.getElementById('photo-card').classList.toggle('hidden', !sides.front.sourceCanvas);
-    updateCopiesNote();
-    if(sides.front.sourceCanvas) refreshPhotoPreview();
-  }catch(err){
-    if(err && err.name === 'PasswordException'){
-      setStatus('Password galat hai ya required hai — sahi password dalein.', 'err');
-    } else {
-      setStatus('File open nahi ho payi. File check karein.', 'err');
-      console.error(err);
-    }
-  }finally{
-    updateLoadBtnState();
-  }
-});
-
-// ---------------- Solo editors (Photos mode: front/back on separate images) ----------------
-const soloEls = {
-  front: {
-    editorEl: document.getElementById('solo-front-editor'),
-    poly: document.getElementById('solo-front-poly'),
-    handles: [0,1,2,3].map(i=>document.getElementById('sf-h'+i)),
-    freeBtn: document.getElementById('mode-free-front'),
-    perspBtn: document.getElementById('mode-perspective-front')
-  },
-  back: {
-    editorEl: document.getElementById('solo-back-editor'),
-    poly: document.getElementById('solo-back-poly'),
-    handles: [0,1,2,3].map(i=>document.getElementById('sb-h'+i)),
-    freeBtn: document.getElementById('mode-free-back'),
-    perspBtn: document.getElementById('mode-perspective-back')
-  }
-};
-
-function updateSoloOverlay(key){
-  const pts = sides[key].pts;
-  soloEls[key].poly.setAttribute('points', pts.map(p=>`${p.x},${p.y}`).join(' '));
-  soloEls[key].handles.forEach((h,i)=>{
-    h.style.left = (pts[i].x*100)+'%';
-    h.style.top = (pts[i].y*100)+'%';
-  });
-}
-function setSoloModeButtons(key){
-  const mode = sides[key].mode;
-  soloEls[key].freeBtn.classList.toggle('active', mode==='free');
-  soloEls[key].perspBtn.classList.toggle('active', mode==='perspective');
-}
-function setSoloMode(key, mode){
-  const side = sides[key];
-  if(side.mode === mode) return;
-  if(mode === 'free'){
-    const xs = side.pts.map(p=>p.x), ys = side.pts.map(p=>p.y);
-    const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
-    side.pts = [{x:minX,y:minY},{x:maxX,y:minY},{x:maxX,y:maxY},{x:minX,y:maxY}];
-  }
-  side.mode = mode;
-  setSoloModeButtons(key);
-  updateSoloOverlay(key);
-}
-soloEls.front.freeBtn.addEventListener('click', ()=> setSoloMode('front','free'));
-soloEls.front.perspBtn.addEventListener('click', ()=> setSoloMode('front','perspective'));
-soloEls.back.freeBtn.addEventListener('click', ()=> setSoloMode('back','free'));
-soloEls.back.perspBtn.addEventListener('click', ()=> setSoloMode('back','perspective'));
-
-let soloDragging = null; // { key, i }
-['front','back'].forEach(key=>{
-  soloEls[key].handles.forEach((h,i)=>{
-    h.addEventListener('pointerdown', e=>{
-      soloDragging = { key, i };
-      h.setPointerCapture(e.pointerId);
-    });
-    h.addEventListener('pointermove', e=>{
-      if(!soloDragging || soloDragging.key!==key || soloDragging.i!==i) return;
-      const rect = soloEls[key].editorEl.getBoundingClientRect();
-      let fx = (e.clientX-rect.left)/rect.width;
-      let fy = (e.clientY-rect.top)/rect.height;
-      fx = Math.max(0, Math.min(1, fx));
-      fy = Math.max(0, Math.min(1, fy));
-      const side = sides[key];
-      if(side.mode === 'free'){
-        const xNeighbour = i===0?3 : i===1?2 : i===2?1 : 0;
-        const yNeighbour = i===0?1 : i===1?0 : i===2?3 : 2;
-        side.pts[i] = {x:fx, y:fy};
-        side.pts[xNeighbour] = {x:fx, y:side.pts[xNeighbour].y};
-        side.pts[yNeighbour] = {x:side.pts[yNeighbour].x, y:fy};
-      } else {
-        side.pts[i] = {x:fx, y:fy};
-      }
-      updateSoloOverlay(key);
-    });
-    h.addEventListener('pointerup', ()=>{ if(soloDragging && soloDragging.key===key && soloDragging.i===i) soloDragging=null; });
-    h.addEventListener('pointercancel', ()=>{ if(soloDragging && soloDragging.key===key && soloDragging.i===i) soloDragging=null; });
-  });
-});
-
-
-
-// ---------------- Tabs (only choose which side the mode toggle affects) ----------------
-document.getElementById('tab-front').addEventListener('click', ()=> switchSide('front'));
-document.getElementById('tab-back').addEventListener('click', ()=> switchSide('back'));
-document.getElementById('mode-free').addEventListener('click', ()=> setMode('free'));
-document.getElementById('mode-perspective').addEventListener('click', ()=> setMode('perspective'));
-
-function switchSide(key){
-  activeSide = key;
-  document.getElementById('tab-front').classList.toggle('active', key==='front');
-  document.getElementById('tab-back').classList.toggle('active', key==='back');
-  updateModeButtons();
-}
-
-function updateModeButtons(){
-  const mode = sides[activeSide].mode;
-  document.getElementById('mode-free').classList.toggle('active', mode==='free');
-  document.getElementById('mode-perspective').classList.toggle('active', mode==='perspective');
-}
-
-function setMode(mode){
-  const side = sides[activeSide];
-  if(side.mode === mode) return;
-  if(mode === 'free'){
-    // snap current quad to its bounding rectangle
-    const xs = side.pts.map(p=>p.x), ys = side.pts.map(p=>p.y);
-    const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
-    side.pts = [{x:minX,y:minY},{x:maxX,y:minY},{x:maxX,y:maxY},{x:minX,y:maxY}];
-  }
-  side.mode = mode;
-  updateModeButtons();
-  updateOverlay();
-}
-
-// ---------------- Overlay drawing (front + back shown together, always) ----------------
-function updateSideOverlay(key){
-  const pts = sides[key].pts;
-  polyEls[key].setAttribute('points', pts.map(p=>`${p.x},${p.y}`).join(' '));
-  handleEls[key].forEach((h,i)=>{
-    h.style.left = (pts[i].x*100)+'%';
-    h.style.top = (pts[i].y*100)+'%';
-  });
-}
-function updateOverlay(){
-  updateSideOverlay('front');
-  updateSideOverlay('back');
-}
-
-// ---------------- Dragging (each side's handles work independently, both visible together) ----------------
-let dragging = null; // { key, i }
-['front','back'].forEach(key=>{
-  handleEls[key].forEach((h,i)=>{
-    h.addEventListener('pointerdown', e=>{
-      dragging = { key, i };
-      h.setPointerCapture(e.pointerId);
-    });
-    h.addEventListener('pointermove', e=>{
-      if(!dragging || dragging.key!==key || dragging.i!==i) return;
-      const rect = editorEl.getBoundingClientRect();
-      let fx = (e.clientX-rect.left)/rect.width;
-      let fy = (e.clientY-rect.top)/rect.height;
-      fx = Math.max(0, Math.min(1, fx));
-      fy = Math.max(0, Math.min(1, fy));
-      const side = sides[key];
-      if(side.mode === 'free'){
-        // enforce axis-aligned rectangle: propagate x to vertical neighbour, y to horizontal neighbour
-        const xNeighbour = i===0?3 : i===1?2 : i===2?1 : 0;
-        const yNeighbour = i===0?1 : i===1?0 : i===2?3 : 2;
-        side.pts[i] = {x:fx, y:fy};
-        side.pts[xNeighbour] = {x:fx, y:side.pts[xNeighbour].y};
-        side.pts[yNeighbour] = {x:side.pts[yNeighbour].x, y:fy};
-      } else {
-        side.pts[i] = {x:fx, y:fy};
-      }
-      updateSideOverlay(key);
-    });
-    h.addEventListener('pointerup', ()=>{ if(dragging && dragging.key===key && dragging.i===i) dragging=null; });
-    h.addEventListener('pointercancel', ()=>{ if(dragging && dragging.key===key && dragging.i===i) dragging=null; });
-  });
-});
-
-// ---------------- Perspective math (unit-square -> quad) ----------------
-function computeQuadTransform(quad){
-  const [p0,p1,p2,p3] = quad;
-  const dx1=p1.x-p2.x, dx2=p3.x-p2.x, dx3=p0.x-p1.x+p2.x-p3.x;
-  const dy1=p1.y-p2.y, dy2=p3.y-p2.y, dy3=p0.y-p1.y+p2.y-p3.y;
-  let a,b,c,d,e,f,g,h;
-  if(Math.abs(dx3)<1e-9 && Math.abs(dy3)<1e-9){
-    a=p1.x-p0.x; b=p3.x-p0.x; c=p0.x;
-    d=p1.y-p0.y; e=p3.y-p0.y; f=p0.y;
-    g=0; h=0;
+function applyCrop() {
+  if (!cropperInstance || cropIndex === null) return;
+  const idx = cropIndex;
+  let canvas;
+  if (freeCropOn) {
+    // free crop: keep whatever aspect ratio the user selected, just cap max size
+    const cropBox = cropperInstance.getCropBoxData();
+    const maxDim = 900;
+    const ratio = cropBox.width / cropBox.height;
+    const outW = ratio >= 1 ? maxDim : Math.round(maxDim * ratio);
+    const outH = ratio >= 1 ? Math.round(maxDim / ratio) : maxDim;
+    canvas = cropperInstance.getCroppedCanvas({ width: outW, height: outH });
   } else {
-    const denom = dx1*dy2 - dx2*dy1;
-    g = denom!==0 ? (dx3*dy2 - dx2*dy3)/denom : 0;
-    h = denom!==0 ? (dx1*dy3 - dx3*dy1)/denom : 0;
-    a = p1.x-p0.x+g*p1.x;
-    b = p3.x-p0.x+h*p3.x;
-    c = p0.x;
-    d = p1.y-p0.y+g*p1.y;
-    e = p3.y-p0.y+h*p3.y;
-    f = p0.y;
+    canvas = cropperInstance.getCroppedCanvas({ width: 350, height: 450 });
   }
-  return {a,b,c,d,e,f,g,h};
+  const img = new Image();
+  img.onload = () => {
+    persons[idx].rawImg = img;
+    persons[idx].hasBg = false;
+    persons[idx].processedCanvas = null;
+    persons[idx].maskCanvas = null;
+    persons[idx].cutoutCanvas = null;
+    document.getElementById('cropModal').classList.remove('open');
+    cropperInstance.destroy();
+    cropperInstance = null;
+    cropIndex = null;
+    renderPersonsGrid();
+  };
+  img.src = canvas.toDataURL('image/jpeg', 0.95);
 }
 
-function warpPerspective(quadNatural, destW, destH, sourceCanvas){
-  if(!sourceCanvas._imgData){
-    sourceCanvas._imgData = sourceCanvas.getContext('2d').getImageData(0,0,sourceCanvas.width,sourceCanvas.height);
+function removePhoto(idx) {
+  persons[idx] = { rawImg: null, brightness: 100, contrast: 100, copies: 6, bgColor: '#ffffff', hasBg: false, processedCanvas: null, maskCanvas: null, cutoutCanvas: null };
+  renderPersonsGrid();
+}
+
+function drawPersonCanvas(idx) {
+  const p = persons[idx];
+  const canvas = document.getElementById(`canvas-${idx}`);
+  if (!canvas) return;
+  const w = 220, h = 220;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // if background was removed but no colour chosen yet, show a checkerboard
+  // (like Photoshop transparency) so it's obvious the background is really gone
+  if (p.cutoutCanvas && !p.processedCanvas) {
+    drawCheckerboard(ctx, w, h);
   }
-  const pw = sourceCanvas.width, ph = sourceCanvas.height;
-  const src = sourceCanvas._imgData.data;
-  const t = computeQuadTransform(quadNatural);
+
+  ctx.filter = `brightness(${p.brightness}%) contrast(${p.contrast}%)`;
+  const source = p.processedCanvas || p.cutoutCanvas || p.rawImg;
+  // cover-fit draw
+  const sw = source.width || source.naturalWidth, sh = source.height || source.naturalHeight;
+  const scale = Math.max(w/sw, h/sh);
+  const dw = sw*scale, dh = sh*scale;
+  ctx.drawImage(source, (w-dw)/2, (h-dh)/2, dw, dh);
+}
+
+function drawCheckerboard(ctx, w, h, size = 12) {
+  for (let y = 0; y < h; y += size) {
+    for (let x = 0; x < w; x += size) {
+      const isEven = ((x / size) + (y / size)) % 2 === 0;
+      ctx.fillStyle = isEven ? '#e5e7eb' : '#ffffff';
+      ctx.fillRect(x, y, size, size);
+    }
+  }
+}
+
+function updateFilter(idx, type, value) {
+  persons[idx][type] = parseInt(value);
+  drawPersonCanvas(idx);
+}
+
+function changeCopies(idx, delta) {
+  const totalOthers = persons.reduce((s,p,i)=> i===idx ? s : s + (p.rawImg ? p.copies : 0), 0);
+  let newVal = persons[idx].copies + delta;
+  if (newVal < 1) newVal = 1;
+  if (totalOthers + newVal > 42) newVal = 42 - totalOthers;
+  if (newVal < 1) newVal = 1;
+  persons[idx].copies = newVal;
+  document.getElementById(`copies-${idx}`).value = newVal;
+  updateTotalInfo();
+}
+
+function updateTotalInfo() {
+  const total = persons.reduce((s,p) => s + (p.rawImg ? p.copies : 0), 0);
+  document.getElementById('totalInfo').innerHTML =
+    `ℹ️ Total Photos: <b>${total}</b> (${42-total} slots remaining) (Max 42 photos per sheet)`;
+}
+
+// ---- Background removal (MediaPipe Selfie Segmentation, runs client-side) ----
+// Switched from BodyPix to Selfie Segmentation: it's built specifically for
+// close-up portrait/selfie framing (exactly a passport photo), and its mask is
+// already returned at the same resolution as the input image, so there's no
+// resize-mismatch causing speckled edges.
+let selfieSegInstance = null;
+
+function getSelfieSeg() {
+  if (typeof SelfieSegmentation === 'undefined') {
+    throw new Error('AI library did not load. Check your internet connection and reload the page.');
+  }
+  if (!selfieSegInstance) {
+    selfieSegInstance = new SelfieSegmentation({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+    });
+    selfieSegInstance.setOptions({ modelSelection: 0 }); // 0 = general model, tuned for close-up portraits
+  }
+  return selfieSegInstance;
+}
+
+// Cache the raw segmentation mask (as a full-resolution, feathered alpha canvas) per person
+// so switching background color doesn't need to re-run the AI model every time.
+async function computeFeatheredMask(img) {
+  const seg = getSelfieSeg();
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+
+  const rawMask = await new Promise((resolve, reject) => {
+    seg.onResults((results) => {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(results.segmentationMask, 0, 0, w, h);
+      resolve(c);
+    });
+    seg.send({ image: img }).catch(reject);
+  });
+
+  // segmentationMask comes back as a grayscale image (intensity = person confidence),
+  // not as an alpha channel — convert it into a proper RGBA mask where alpha = confidence.
+  const mctx = rawMask.getContext('2d');
+  const id = mctx.getImageData(0, 0, w, h);
+  const d = id.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const conf = d[i]; // R channel holds the confidence value
+    // snap strong/weak confidence to solid values to avoid a colour-contaminated halo,
+    // but keep the true edge band soft so hair/beard boundaries still blend naturally
+    const alpha = conf > 170 ? 255 : (conf < 60 ? 0 : conf);
+    d[i] = 255; d[i + 1] = 255; d[i + 2] = 255; d[i + 3] = alpha;
+  }
+  mctx.putImageData(id, 0, 0);
+
+  const finalMask = document.createElement('canvas');
+  finalMask.width = w; finalMask.height = h;
+  const fctx = finalMask.getContext('2d');
+  fctx.filter = 'blur(1px)';
+  fctx.drawImage(rawMask, 0, 0);
+  return finalMask;
+}
+
+// Produces a real cutout: original person pixels kept, background made transparent
+// (with a soft, feathered edge). No colour is applied here.
+function buildCutout(img, maskCanvas) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = w; srcCanvas.height = h;
+  const sctx = srcCanvas.getContext('2d');
+  sctx.drawImage(img, 0, 0, w, h);
+  const imageData = sctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+  const maskData = maskCanvas.getContext('2d').getImageData(0, 0, w, h).data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    data[i + 3] = maskData[i + 3]; // keep original colour, only alpha comes from the mask
+  }
+  sctx.putImageData(imageData, 0, 0);
+  return srcCanvas;
+}
+
+// Composites an already-cut-out (transparent) photo onto a solid colour background.
+function compositeOnColor(cutoutCanvas, bgColorHex) {
+  const w = cutoutCanvas.width, h = cutoutCanvas.height;
   const out = document.createElement('canvas');
-  out.width = destW; out.height = destH;
+  out.width = w; out.height = h;
   const octx = out.getContext('2d');
-  const outImg = octx.createImageData(destW, destH);
-  const dst = outImg.data;
+  octx.fillStyle = bgColorHex;
+  octx.fillRect(0, 0, w, h);
+  octx.drawImage(cutoutCanvas, 0, 0);
+  return out;
+}
 
-  for(let dy=0; dy<destH; dy++){
-    const v = dy/destH;
-    for(let dx=0; dx<destW; dx++){
-      const u = dx/destW;
-      const denom = t.g*u + t.h*v + 1;
-      const sx = (t.a*u + t.b*v + t.c)/denom;
-      const sy = (t.d*u + t.e*v + t.f)/denom;
-      const di = (dy*destW+dx)*4;
-      if(sx<0 || sy<0 || sx>=pw-1 || sy>=ph-1){
-        dst[di]=255; dst[di+1]=255; dst[di+2]=255; dst[di+3]=255;
-        continue;
+async function removeBackground(idx) {
+  const statusEl = document.getElementById(`status-${idx}`);
+  const btn = document.getElementById(`rembg-${idx}`);
+  try {
+    btn.disabled = true;
+    statusEl.textContent = 'Loading AI model & removing background... (first time may take 10-30 sec, needs internet)';
+    const img = persons[idx].rawImg;
+    const mask = await computeFeatheredMask(img);
+    persons[idx].maskCanvas = mask;
+    persons[idx].cutoutCanvas = buildCutout(img, mask);
+    persons[idx].processedCanvas = null; // no colour applied yet — show transparent cutout first
+    persons[idx].hasBg = true;
+    statusEl.textContent = '✅ Background removed! Ab neeche se ek color chuniye.';
+    btn.textContent = 'Re-run Remove Background';
+    btn.disabled = false;
+    renderPersonsGrid();
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '⚠️ ' + (err && err.message ? err.message : 'Could not process. Try a clearer photo.');
+    btn.disabled = false;
+  }
+}
+
+function setBgColor(idx, color) {
+  persons[idx].bgColor = color;
+  if (persons[idx].hasBg && persons[idx].cutoutCanvas) {
+    // instant colour fill using the already-cut-out photo — no need to re-run the AI model
+    persons[idx].processedCanvas = compositeOnColor(persons[idx].cutoutCanvas, color);
+    drawPersonCanvas(idx);
+  }
+  renderPersonsGrid();
+}
+
+// ---- Fix Edge Colour (simple paint-over tool) ----
+// No automatic AI segmentation is pixel-perfect on every photo, so a thin
+// white/old-background rim can remain around hair or collar edges. Instead of a
+// confusing erase/restore brush, this just paints the SAME background colour the
+// user picked directly over those spots — draw over the white edge and it blends in.
+let fixEdgeIndex = null;
+let fixEdgeCanvas = null;
+let fixEdgeCtx = null;
+let fixEdgeWorking = null;
+let fixEdgeHistory = [];
+let isPaintingEdge = false;
+
+function openFixEdge(idx) {
+  const p = persons[idx];
+  if (!p.processedCanvas) return;
+  fixEdgeIndex = idx;
+  fixEdgeHistory = [];
+  document.getElementById('fixEdgeLabel').textContent = `Person ${idx + 1}`;
+
+  fixEdgeCanvas = document.getElementById('fixEdgeCanvas');
+  fixEdgeCanvas.width = p.processedCanvas.width;
+  fixEdgeCanvas.height = p.processedCanvas.height;
+  fixEdgeCtx = fixEdgeCanvas.getContext('2d');
+
+  fixEdgeWorking = document.createElement('canvas');
+  fixEdgeWorking.width = p.processedCanvas.width;
+  fixEdgeWorking.height = p.processedCanvas.height;
+  fixEdgeWorking.getContext('2d').drawImage(p.processedCanvas, 0, 0);
+
+  fixEdgeCtx.drawImage(fixEdgeWorking, 0, 0);
+  document.getElementById('fixEdgeModal').classList.add('open');
+
+  fixEdgeCanvas.onpointerdown = (e) => { isPaintingEdge = true; pushFixEdgeHistory(); paintEdgeAtEvent(e); };
+  fixEdgeCanvas.onpointermove = (e) => { if (isPaintingEdge) paintEdgeAtEvent(e); };
+  window.addEventListener('pointerup', () => { isPaintingEdge = false; });
+}
+
+function getFixEdgePos(e) {
+  const rect = fixEdgeCanvas.getBoundingClientRect();
+  const scaleX = fixEdgeCanvas.width / rect.width, scaleY = fixEdgeCanvas.height / rect.height;
+  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+}
+
+function paintEdgeAtEvent(e) {
+  const pos = getFixEdgePos(e);
+  const radius = parseInt(document.getElementById('fixBrushSlider').value);
+  const color = persons[fixEdgeIndex].bgColor;
+  paintColor(fixEdgeWorking, pos.x, pos.y, radius, color);
+  fixEdgeCtx.drawImage(fixEdgeWorking, 0, 0);
+}
+
+function paintColor(canvas, cx, cy, radius, colorHex) {
+  const ctx = canvas.getContext('2d');
+  const rgb = hexToRgb(colorHex);
+  const x0 = Math.max(0, Math.floor(cx - radius)), y0 = Math.max(0, Math.floor(cy - radius));
+  const x1 = Math.min(canvas.width, Math.ceil(cx + radius)), y1 = Math.min(canvas.height, Math.ceil(cy + radius));
+  const w = x1 - x0, h = y1 - y0;
+  if (w <= 0 || h <= 0) return;
+  const imgData = ctx.getImageData(x0, y0, w, h);
+  const d = imgData.data;
+  const r2 = radius * radius;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const dx = (x0 + x) - cx, dy = (y0 + y) - cy;
+      if (dx * dx + dy * dy <= r2) {
+        const i = (y * w + x) * 4;
+        d[i] = rgb.r; d[i + 1] = rgb.g; d[i + 2] = rgb.b; d[i + 3] = 255;
       }
-      const x0=Math.floor(sx), y0=Math.floor(sy);
-      const x1=x0+1<pw?x0+1:x0, y1=y0+1<ph?y0+1:y0;
-      const fx=sx-x0, fy=sy-y0;
-      for(let c=0;c<3;c++){
-        const i00=(y0*pw+x0)*4+c, i10=(y0*pw+x1)*4+c, i01=(y1*pw+x0)*4+c, i11=(y1*pw+x1)*4+c;
-        const top = src[i00]*(1-fx)+src[i10]*fx;
-        const bot = src[i01]*(1-fx)+src[i11]*fx;
-        dst[di+c] = top*(1-fy)+bot*fy;
-      }
-      dst[di+3]=255;
     }
   }
-  octx.putImageData(outImg,0,0);
-  return out;
+  ctx.putImageData(imgData, x0, y0);
 }
 
-function naturalPts(side){
-  const sc = side.sourceCanvas;
-  return side.pts.map(p=>({ x:p.x*sc.width, y:p.y*sc.height }));
+function pushFixEdgeHistory() {
+  fixEdgeHistory.push(fixEdgeWorking.getContext('2d').getImageData(0, 0, fixEdgeWorking.width, fixEdgeWorking.height));
+  if (fixEdgeHistory.length > 20) fixEdgeHistory.shift();
 }
 
-function getActiveCards(){
-  const list = [];
-  if(sides.front.sourceCanvas) list.push('front');
-  if(sides.back.sourceCanvas) list.push('back');
-  return list;
+function undoFixEdge() {
+  if (!fixEdgeHistory.length) return;
+  const last = fixEdgeHistory.pop();
+  fixEdgeWorking.getContext('2d').putImageData(last, 0, 0);
+  fixEdgeCtx.drawImage(fixEdgeWorking, 0, 0);
 }
 
-function cropToCanvas(sideKey, destW, destH){
-  const side = sides[sideKey];
-  if(!side.sourceCanvas) return null;
-  const nq = naturalPts(side);
-  if(side.mode === 'perspective'){
-    return warpPerspective(nq, destW, destH, side.sourceCanvas);
-  }
-  const xs = nq.map(p=>p.x), ys = nq.map(p=>p.y);
-  const sx = Math.min(...xs), sy = Math.min(...ys);
-  const sw = Math.max(...xs)-sx, sh = Math.max(...ys)-sy;
-  const out = document.createElement('canvas');
-  out.width = destW; out.height = destH;
-  out.getContext('2d').drawImage(side.sourceCanvas, sx, sy, sw, sh, 0, 0, destW, destH);
-  return out;
+function closeFixEdge() {
+  document.getElementById('fixEdgeModal').classList.remove('open');
+  fixEdgeIndex = null;
 }
 
-// ---------------- Templates ----------------
-const TEMPLATE_KEY = 'idCropStudioTemplates_v1';
-function loadTemplates(){
-  try{ return JSON.parse(localStorage.getItem(TEMPLATE_KEY)) || []; }catch(e){ return []; }
-}
-function saveTemplates(list){
-  try{ localStorage.setItem(TEMPLATE_KEY, JSON.stringify(list)); }catch(e){}
-}
-function renderChips(){
-  const list = loadTemplates();
-  const card = document.getElementById('templates-card');
-  const row = document.getElementById('chip-row');
-  row.innerHTML = '';
-  if(list.length === 0){ card.classList.add('hidden'); return; }
-  card.classList.remove('hidden');
-  list.forEach((tmpl, idx)=>{
-    const chip = document.createElement('div');
-    chip.className = 'chip';
-    const label = document.createElement('span');
-    label.className = 'apply';
-    label.textContent = tmpl.name;
-    label.addEventListener('click', ()=> applyTemplate(tmpl));
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.textContent = '\u00d7';
-    del.addEventListener('click', ()=>{
-      const l = loadTemplates();
-      l.splice(idx,1);
-      saveTemplates(l);
-      renderChips();
-    });
-    chip.appendChild(label);
-    chip.appendChild(del);
-    row.appendChild(chip);
-  });
+function saveFixEdge() {
+  const idx = fixEdgeIndex;
+  if (idx === null) return;
+  persons[idx].processedCanvas = fixEdgeWorking;
+  closeFixEdge();
+  renderPersonsGrid();
 }
 
-function applyTemplate(tmpl){
-  sides.front.mode = tmpl.front.mode;
-  sides.front.pts = JSON.parse(JSON.stringify(tmpl.front.pts));
-  sides.back.mode = tmpl.back.mode;
-  sides.back.pts = JSON.parse(JSON.stringify(tmpl.back.pts));
-
-  if(uploadMode === 'pdf'){
-    switchSide(activeSide);
-    updateOverlay();
-  } else {
-    if(sides.front.sourceCanvas){ setSoloModeButtons('front'); updateSoloOverlay('front'); }
-    if(sides.back.sourceCanvas){ setSoloModeButtons('back'); updateSoloOverlay('back'); }
-  }
-
-  if(hasAnySource()){
-    refreshPhotoPreview();
-    generateOutputs();
-    setStatus(`Template "${tmpl.name}" apply ho gaya.`, 'ok');
-  } else {
-    setStatus(`Template "${tmpl.name}" load ho gaya — pehle file upload karein.`, 'ok');
-  }
+function hexToRgb(hex) {
+  const v = parseInt(hex.replace('#',''), 16);
+  return { r: (v>>16)&255, g: (v>>8)&255, b: v&255 };
 }
 
-document.getElementById('save-tmpl-btn').addEventListener('click', ()=>{
-  const name = prompt('Is crop template ka naam dein:');
-  if(!name) return;
-  const list = loadTemplates();
-  const existingIdx = list.findIndex(t=>t.name===name);
-  const tmpl = {
-    name,
-    front: { mode: sides.front.mode, pts: JSON.parse(JSON.stringify(sides.front.pts)) },
-    back:  { mode: sides.back.mode,  pts: JSON.parse(JSON.stringify(sides.back.pts)) }
+// ---- Color / Flood-Fill based background removal (2nd method) ----
+// Works great on photos with a plain/solid backdrop (most passport photo studio
+// shots): it grows outward from a seed pixel through similarly-coloured
+// neighbours (like the "magic wand" tool in Photoshop) and makes that whole
+// region transparent. "Auto Remove" seeds from all four edges at once
+// (background almost always touches the border); tapping the photo seeds from
+// just that one point, for spot-fixing a corner Auto Remove missed.
+let colorRemoveIndex = null;
+let colorRemoveCanvas = null;
+let colorRemoveCtx = null;
+let colorRemoveWorking = null;
+let colorRemoveOriginal = null;
+let colorRemoveHistory = [];
+
+function openColorRemove(idx) {
+  const p = persons[idx];
+  if (!p.rawImg) return;
+  colorRemoveIndex = idx;
+  colorRemoveHistory = [];
+  document.getElementById('colorRemoveLabel').textContent = `Person ${idx + 1}`;
+
+  const img = p.rawImg;
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  colorRemoveCanvas = document.getElementById('colorRemoveCanvas');
+  colorRemoveCanvas.width = w; colorRemoveCanvas.height = h;
+  colorRemoveCtx = colorRemoveCanvas.getContext('2d');
+
+  // continue from any existing cutout (either method) so the two tools can be combined
+  colorRemoveWorking = document.createElement('canvas');
+  colorRemoveWorking.width = w; colorRemoveWorking.height = h;
+  colorRemoveWorking.getContext('2d').drawImage(p.cutoutCanvas || img, 0, 0, w, h);
+
+  colorRemoveOriginal = document.createElement('canvas');
+  colorRemoveOriginal.width = w; colorRemoveOriginal.height = h;
+  colorRemoveOriginal.getContext('2d').drawImage(img, 0, 0, w, h);
+
+  renderColorRemoveDisplay();
+  document.getElementById('colorRemoveModal').classList.add('open');
+
+  colorRemoveCanvas.onpointerdown = (e) => { pushColorRemoveHistory(); clickRemoveAt(e); };
+}
+
+function renderColorRemoveDisplay() {
+  drawCheckerboard(colorRemoveCtx, colorRemoveCanvas.width, colorRemoveCanvas.height, 14);
+  colorRemoveCtx.drawImage(colorRemoveWorking, 0, 0);
+}
+
+function getColorRemovePos(e) {
+  const rect = colorRemoveCanvas.getBoundingClientRect();
+  const scaleX = colorRemoveCanvas.width / rect.width, scaleY = colorRemoveCanvas.height / rect.height;
+  return {
+    x: Math.min(colorRemoveCanvas.width - 1, Math.max(0, Math.floor((e.clientX - rect.left) * scaleX))),
+    y: Math.min(colorRemoveCanvas.height - 1, Math.max(0, Math.floor((e.clientY - rect.top) * scaleY)))
   };
-  if(existingIdx>=0) list[existingIdx] = tmpl; else list.push(tmpl);
-  saveTemplates(list);
-  renderChips();
-});
+}
 
-document.getElementById('export-tmpl-btn').addEventListener('click', ()=>{
-  const list = loadTemplates();
-  const blob = new Blob([JSON.stringify(list,null,2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'id-crop-templates.json';
-  a.click();
-});
+function clickRemoveAt(e) {
+  const pos = getColorRemovePos(e);
+  const tolerance = parseInt(document.getElementById('toleranceSlider').value);
+  floodFillRemove(colorRemoveWorking, pos.x, pos.y, tolerance);
+  renderColorRemoveDisplay();
+}
 
-document.getElementById('import-tmpl-input').addEventListener('change', async e=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  try{
-    const text = await file.text();
-    const imported = JSON.parse(text);
-    if(!Array.isArray(imported)) throw new Error('bad format');
-    const list = loadTemplates();
-    imported.forEach(t=>{
-      const idx = list.findIndex(x=>x.name===t.name);
-      if(idx>=0) list[idx]=t; else list.push(t);
-    });
-    saveTemplates(list);
-    renderChips();
-    setStatus('Templates import ho gaye.', 'ok');
-  }catch(err){
-    setStatus('Template file import nahi ho payi.', 'err');
+function autoRemoveColor() {
+  pushColorRemoveHistory();
+  const tolerance = parseInt(document.getElementById('toleranceSlider').value);
+  autoFloodFillFromEdges(colorRemoveWorking, tolerance);
+  renderColorRemoveDisplay();
+}
+
+// Single-seed flood fill (Click Remove): grows from one tapped pixel.
+function floodFillRemove(canvas, startX, startY, tolerance) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+  const startIdx = startY * w + startX;
+  if (d[startIdx * 4 + 3] === 0) return; // already transparent there
+
+  const sr = d[startIdx * 4], sg = d[startIdx * 4 + 1], sb = d[startIdx * 4 + 2];
+  const maxDist = tolerance * 3; // manhattan distance across R+G+B
+  const visited = new Uint8Array(w * h);
+  const queue = [startIdx];
+  visited[startIdx] = 1;
+  let head = 0;
+
+  while (head < queue.length) {
+    const pIdx = queue[head++];
+    const di = pIdx * 4;
+    const dist = Math.abs(d[di] - sr) + Math.abs(d[di + 1] - sg) + Math.abs(d[di + 2] - sb);
+    if (dist > maxDist) continue;
+    d[di + 3] = 0;
+
+    const px = pIdx % w, py = (pIdx / w) | 0;
+    if (px > 0 && !visited[pIdx - 1]) { visited[pIdx - 1] = 1; queue.push(pIdx - 1); }
+    if (px < w - 1 && !visited[pIdx + 1]) { visited[pIdx + 1] = 1; queue.push(pIdx + 1); }
+    if (py > 0 && !visited[pIdx - w]) { visited[pIdx - w] = 1; queue.push(pIdx - w); }
+    if (py < h - 1 && !visited[pIdx + w]) { visited[pIdx + w] = 1; queue.push(pIdx + w); }
   }
-  e.target.value = '';
-});
-
-// ---------------- Output generation ----------------
-function gridInfo(s, unitCount){
-  const cardW = MM_TO_PX(s.widthMM), cardH = MM_TO_PX(s.heightMM);
-  const marginPx = MM_TO_PX(s.topMarginMM);
-  const gapX = MM_TO_PX(s.spaceXMM), gapY = MM_TO_PX(s.spaceYMM);
-  const pageW = MM_TO_PX(210), pageH = MM_TO_PX(297);
-  const cols = Math.max(1, Math.floor((pageW - 2*marginPx + gapX) / (cardW + gapX)));
-  const rows = Math.max(1, Math.floor((pageH - 2*marginPx + gapY) / (cardH + gapY)));
-  const unitCols = Math.floor(cols/unitCount) || 1;
-  return { pageW, pageH, cardW, cardH, marginPx, gapX, gapY, unitCols, rows, maxCopies: unitCols*rows };
+  ctx.putImageData(imgData, 0, 0);
 }
 
-function updateCopiesNote(){
-  const unitCount = Math.max(1, getActiveCards().length);
-  const { maxCopies } = gridInfo(getSettings(), unitCount);
-  const copiesInput = document.getElementById('copies');
-  copiesInput.max = maxCopies;
-  if(Number(copiesInput.value) > maxCopies) copiesInput.value = maxCopies;
-  document.getElementById('copies-note').textContent = `A4 sheet par max ${maxCopies} copies fit hongi`;
+// Multi-seed flood fill (Auto Remove): starts from every border pixel at once and
+// grows inward through gradually-similar neighbouring colours — this follows soft
+// gradients/shadows in the backdrop but stops at the sharper edge where the
+// person begins, without needing one single fixed "background colour".
+function autoFloodFillFromEdges(canvas, tolerance) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+  const visited = new Uint8Array(w * h);
+  const queue = [];
+  const maxDist = tolerance * 3;
+
+  const tryEnqueue = (x, y) => {
+    const idx = y * w + x;
+    if (!visited[idx]) { visited[idx] = 1; queue.push(idx); }
+  };
+  for (let x = 0; x < w; x++) { tryEnqueue(x, 0); tryEnqueue(x, h - 1); }
+  for (let y = 0; y < h; y++) { tryEnqueue(0, y); tryEnqueue(w - 1, y); }
+
+  let head = 0;
+  while (head < queue.length) {
+    const pIdx = queue[head++];
+    const di = pIdx * 4;
+    d[di + 3] = 0;
+    const r = d[di], g = d[di + 1], b = d[di + 2];
+    const px = pIdx % w, py = (pIdx / w) | 0;
+    const neighbors = [];
+    if (px > 0) neighbors.push(pIdx - 1);
+    if (px < w - 1) neighbors.push(pIdx + 1);
+    if (py > 0) neighbors.push(pIdx - w);
+    if (py < h - 1) neighbors.push(pIdx + w);
+    for (const nIdx of neighbors) {
+      if (visited[nIdx]) continue;
+      const ni = nIdx * 4;
+      const dist = Math.abs(d[ni] - r) + Math.abs(d[ni + 1] - g) + Math.abs(d[ni + 2] - b);
+      if (dist <= maxDist) { visited[nIdx] = 1; queue.push(nIdx); }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
 }
 
-function drawCropMarks(ctx, x, y, w, h){
-  const len = MM_TO_PX(3);
-  ctx.strokeStyle = '#999';
-  ctx.lineWidth = 1;
-  const corners = [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]];
-  corners.forEach(([cx,cy,dx,dy])=>{
-    ctx.beginPath();
-    ctx.moveTo(cx, cy+dy*len); ctx.lineTo(cx,cy); ctx.lineTo(cx+dx*len,cy);
-    ctx.stroke();
-  });
+function pushColorRemoveHistory() {
+  colorRemoveHistory.push(colorRemoveWorking.getContext('2d').getImageData(0, 0, colorRemoveWorking.width, colorRemoveWorking.height));
+  if (colorRemoveHistory.length > 15) colorRemoveHistory.shift();
 }
 
-function buildSheetCanvas(cards, s, g){
-  const unitCount = cards.length;
-  const requested = Number(document.getElementById('copies').value) || 1;
-  const copies = Math.min(Math.max(1, requested), g.maxCopies);
-  document.getElementById('copies').value = copies;
+function undoColorRemove() {
+  if (!colorRemoveHistory.length) return;
+  const last = colorRemoveHistory.pop();
+  colorRemoveWorking.getContext('2d').putImageData(last, 0, 0);
+  renderColorRemoveDisplay();
+}
 
-  const { pageW, pageH, cardW, cardH, marginPx, gapX, gapY, unitCols, rows } = g;
+function resetColorRemove() {
+  pushColorRemoveHistory();
+  const wctx = colorRemoveWorking.getContext('2d');
+  wctx.clearRect(0, 0, colorRemoveWorking.width, colorRemoveWorking.height);
+  wctx.drawImage(colorRemoveOriginal, 0, 0);
+  renderColorRemoveDisplay();
+}
+
+function closeColorRemove() {
+  document.getElementById('colorRemoveModal').classList.remove('open');
+  colorRemoveIndex = null;
+}
+
+function saveColorRemove() {
+  const idx = colorRemoveIndex;
+  if (idx === null) return;
+  persons[idx].cutoutCanvas = colorRemoveWorking;
+  persons[idx].hasBg = true;
+  persons[idx].processedCanvas = null; // let the user pick a colour next, same as the AI method
+  closeColorRemove();
+  renderPersonsGrid();
+}
+
+// ---- Step 3: generate A4 sheet ----
+function generateSheet() {
+  const dpi = 300;
+  const mm = v => v * dpi / 25.4; // mm -> px, keep as float for precision
+  const pageW = Math.round(mm(210)), pageH = Math.round(mm(297));
+
+  // Layout constants (all in mm, then converted) — fixed at 6 columns per row
+  const cols = 6;
+  const marginXmm = 4, marginYmm = 4, gapMm = 2;
+  const aspect = 45 / 35; // standard passport photo height/width ratio
+
+  // Fit photo width to exactly 6 columns across the page width
+  const availWmm = 210 - marginXmm * 2 - gapMm * (cols - 1);
+  let photoWmm = availWmm / cols;
+  let photoHmm = photoWmm * aspect;
+
+  // Figure out how many rows fit in the remaining height with that photo size
+  const availHmm = 297 - marginYmm * 2;
+  const rows = Math.max(1, Math.floor((availHmm + gapMm) / (photoHmm + gapMm)));
+
+  const photoW = mm(photoWmm), photoH = mm(photoHmm);
+  const gap = mm(gapMm), marginX = mm(marginXmm), marginY = mm(marginYmm);
+
   const canvas = document.createElement('canvas');
   canvas.width = pageW; canvas.height = pageH;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0,0,pageW,pageH);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, pageW, pageH);
 
-  const unitW = unitCount*cardW + (unitCount-1)*gapX;
-  const gridW = unitCols*(unitW+gapX) - gapX;
-  const offsetX = Math.max(marginPx, (pageW-gridW)/2);
-  const offsetY = marginPx;
+  const borderColor = document.getElementById('borderColor').value;
+  const borderWidth = Math.max(2, Math.round(mm(0.4))); // ~0.4mm border, always visible
+
+  // build the flat list of images to place
+  const list = [];
+  persons.forEach(p => {
+    if (p.rawImg) {
+      const source = p.processedCanvas || (p.cutoutCanvas ? compositeOnColor(p.cutoutCanvas, p.bgColor || '#ffffff') : p.rawImg);
+      for (let c = 0; c < p.copies; c++) list.push({ source, brightness: p.brightness, contrast: p.contrast });
+    }
+  });
 
   let placed = 0;
   outer:
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<unitCols;c++){
-      if(placed>=copies) break outer;
-      const baseX = offsetX + c*(unitW+gapX);
-      const y = offsetY + r*(cardH+gapY);
-      cards.forEach((cardCanvas, idx)=>{
-        const x = baseX + idx*(cardW+gapX);
-        ctx.drawImage(cardCanvas, x, y, cardW, cardH);
-        if(s.border){
-          ctx.strokeStyle='#ccc'; ctx.lineWidth=1;
-          ctx.strokeRect(x,y,cardW,cardH);
-          drawCropMarks(ctx, x,y,cardW,cardH);
-        }
-      });
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (placed >= list.length) break outer;
+      const item = list[placed];
+      const x = marginX + c * (photoW + gap);
+      const y = marginY + r * (photoH + gap);
+
+      ctx.save();
+      ctx.filter = `brightness(${item.brightness}%) contrast(${item.contrast}%)`;
+      const sw = item.source.width || item.source.naturalWidth;
+      const sh = item.source.height || item.source.naturalHeight;
+      const scale = Math.max(photoW / sw, photoH / sh);
+      const dw = sw * scale, dh = sh * scale;
+      ctx.beginPath();
+      ctx.rect(x, y, photoW, photoH);
+      ctx.clip();
+      ctx.drawImage(item.source, x + (photoW - dw) / 2, y + (photoH - dh) / 2, dw, dh);
+      ctx.restore();
+
+      // draw border ON TOP, inset slightly so it's never clipped away
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = borderWidth;
+      ctx.strokeRect(
+        x + borderWidth / 2,
+        y + borderWidth / 2,
+        photoW - borderWidth,
+        photoH - borderWidth
+      );
+
       placed++;
     }
   }
-  return canvas;
+
+  sheetCanvas = canvas;
+  document.getElementById('sheetImg').src = canvas.toDataURL('image/jpeg', 0.95);
+  document.getElementById('sheetResult').style.display = 'block';
+  document.getElementById('sheetResult').scrollIntoView({behavior:'smooth'});
 }
 
-function generateOutputs(){
-  if(!hasAnySource()) return;
-  const activeKeys = getActiveCards();
-  if(activeKeys.length === 0) return;
-  setStatus('Crop process ho raha hai...');
-  setTimeout(()=>{
-    const s = getSettings();
-    const g = gridInfo(s, activeKeys.length);
-
-    const cardCanvases = activeKeys.map(key=>cropToCanvas(key, g.cardW, g.cardH));
-
-    if(activeKeys.includes('front')){
-      const frontIdx = activeKeys.indexOf('front');
-      const brightness = Number(document.getElementById('opt-brightness').value);
-      const contrastVal = Number(document.getElementById('opt-contrast').value);
-      applyBrightnessContrast(cardCanvases[frontIdx], brightness, contrastVal);
-    }
-
-    const gap = g.gapX;
-    const composite = document.createElement('canvas');
-    composite.width = g.cardW*cardCanvases.length + gap*(cardCanvases.length-1);
-    composite.height = g.cardH;
-    const cctx = composite.getContext('2d');
-    cctx.fillStyle='#fff'; cctx.fillRect(0,0,composite.width,composite.height);
-    cardCanvases.forEach((c,idx)=> cctx.drawImage(c, idx*(g.cardW+gap), 0));
-
-    const cardPreview = document.getElementById('card-canvas');
-    cardPreview.width = composite.width; cardPreview.height = composite.height;
-    cardPreview.getContext('2d').drawImage(composite,0,0);
-
-    const sheet = buildSheetCanvas(cardCanvases, s, g);
-    const a4Preview = document.getElementById('a4-canvas');
-    a4Preview.width = sheet.width; a4Preview.height = sheet.height;
-    a4Preview.getContext('2d').drawImage(sheet,0,0);
-
-    document.getElementById('card-size-tag').textContent =
-      `Card size · exact ${s.widthMM}mm × ${s.heightMM}mm`;
-
-    previewWrap.classList.remove('hidden');
-    setStatus('Preview ready hai.', 'ok');
-  }, 20);
+function downloadJPG() {
+  if (!sheetCanvas) return;
+  const link = document.createElement('a');
+  link.download = 'passport-photo-sheet.jpg';
+  link.href = sheetCanvas.toDataURL('image/jpeg', 0.95);
+  link.click();
 }
 
-document.getElementById('generate-btn').addEventListener('click', generateOutputs);
-document.getElementById('copies').addEventListener('change', ()=>{ if(hasAnySource()) generateOutputs(); });
-bindSettingsUI();
-
-document.getElementById('dl-jpeg-card').addEventListener('click', ()=>{
-  const canvas = document.getElementById('card-canvas');
-  const a = document.createElement('a');
-  a.download = 'id-card-front-back.jpg';
-  a.href = canvas.toDataURL('image/jpeg', 0.95);
-  a.click();
-});
-document.getElementById('dl-pdf').addEventListener('click', ()=>{
-  const canvas = document.getElementById('a4-canvas');
+function downloadPDF() {
+  if (!sheetCanvas) return;
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ unit:'mm', format:'a4' });
-  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const imgData = sheetCanvas.toDataURL('image/jpeg', 0.95);
   pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
-  pdf.save('id-card-a4-sheet.pdf');
-});
-document.getElementById('dl-jpeg-sheet').addEventListener('click', ()=>{
-  const canvas = document.getElementById('a4-canvas');
-  const a = document.createElement('a');
-  a.download = 'id-card-a4-sheet.jpg';
-  a.href = canvas.toDataURL('image/jpeg', 0.95);
-  a.click();
-});
-
-renderChips();
+  pdf.save('passport-photo-sheet.pdf');
+}
 </script>
 </body>
 </html>
